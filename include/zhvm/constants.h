@@ -16,6 +16,7 @@
  * ZHVM image identifier.
  */
 #define ZHVM_MEMORY_FILE_MAGIC (0xD0FA5534)
+#define ZHVM_MEMORY_FILE_MAGIC_ENCRYPTED (0xD0FA5535)
 
 /**
  * ZHVM versions.

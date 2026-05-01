@@ -38,6 +38,7 @@ namespace zhvm {
         size_t dsize;
 
         cfunc funcs[ZHVM_CFUNC_ARRAY_SIZE];
+        uint32_t magic;
 
     public:
 
@@ -110,6 +111,14 @@ namespace zhvm {
             }
             sflag |= (1 << reg);
             return *this;
+        }
+
+        inline void SetMagic(uint32_t val) {
+            this->magic = val;
+        }
+
+        inline uint32_t GetMagic() const {
+            return this->magic;
         }
 
         /**

@@ -12,15 +12,15 @@ namespace zhvm {
         return IR_HALT;
     }
 
-    memory::memory() : regs(), sflag(0), cdata(0), csize(0), ddata(0), dsize(0), funcs() {
+    memory::memory() : regs(), sflag(0), cdata(0), csize(0), ddata(0), dsize(0), funcs(), magic(ZHVM_MEMORY_FILE_MAGIC) {
         this->NewImage(1024, 1024);
     }
 
-    memory::memory(size_t codesize, size_t datasize) : regs(), sflag(0), cdata(0), csize(0), ddata(0), dsize(0), funcs() {
+    memory::memory(size_t codesize, size_t datasize) : regs(), sflag(0), cdata(0), csize(0), ddata(0), dsize(0), funcs(), magic(ZHVM_MEMORY_FILE_MAGIC) {
         this->NewImage(codesize, datasize);
     }
 
-    memory::memory(const memory& copy) : regs(), sflag(copy.sflag), cdata(0), csize(0), ddata(0), dsize(0), funcs() {
+    memory::memory(const memory& copy) : regs(), sflag(copy.sflag), cdata(0), csize(0), ddata(0), dsize(0), funcs(), magic(copy.magic) {
         this->cdata = new char[copy.csize];
         this->csize = copy.csize;
         memcpy(this->cdata, copy.cdata, this->csize);
@@ -61,6 +61,7 @@ namespace zhvm {
                 this->funcs[i] = src.funcs[i];
             }
             this->sflag = src.sflag;
+            this->magic = src.magic;
         }
         return *this;
     }
@@ -84,6 +85,7 @@ namespace zhvm {
                 this->funcs[i] = src.funcs[i];
             }
             this->sflag = src.sflag;
+            this->magic = src.magic;
 
             src.cdata = 0;
             src.csize = 0;
@@ -94,7 +96,7 @@ namespace zhvm {
         return *this;
     }
 
-    memory::memory(memory&& mv) : regs(), sflag(mv.sflag), cdata(mv.cdata), csize(mv.csize), ddata(mv.ddata), dsize(mv.dsize), funcs() {
+    memory::memory(memory&& mv) : regs(), sflag(mv.sflag), cdata(mv.cdata), csize(mv.csize), ddata(mv.ddata), dsize(mv.dsize), funcs(), magic(mv.magic) {
         for (int i = RZ; i < RTOTAL; ++i) {
             this->regs[i] = mv.regs[i];
         }
@@ -232,7 +234,7 @@ namespace zhvm {
     void memory::Dump(std::ostream & out) const {
         if (out) {
             memory_file_header mfh;
-            mfh.magic = ZHVM_MEMORY_FILE_MAGIC;
+            mfh.magic = this->magic;
             mfh.version = ZHVM_VM_VERSION;
             mfh.csize = this->csize;
             mfh.dsize = this->dsize;
@@ -260,9 +262,10 @@ namespace zhvm {
                 throw std::runtime_error("Unexpected EOF");
             }
 
-            if (mfh.magic != ZHVM_MEMORY_FILE_MAGIC) {
+            if ((mfh.magic != ZHVM_MEMORY_FILE_MAGIC) && (mfh.magic != ZHVM_MEMORY_FILE_MAGIC_ENCRYPTED)) {
                 throw std::runtime_error("Not a ZHVM image");
             }
+            this->magic = mfh.magic;
 
             if (mfh.version != ZHVM_VM_VERSION) {
                 throw std::runtime_error("Invalid ZHVM version");

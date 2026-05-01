@@ -20,6 +20,9 @@
 #include <queue>
 #include <climits>
 #include <stdexcept>
+#include <cstdlib>
+
+#define ENCRYPT_KEY 0xDEADC0DE
 
 namespace zhvm {
 
@@ -52,7 +55,7 @@ namespace zhvm {
         }
     }
 
-    cmplv2::cmplv2(const char* input, memory* mem) : labels(), fixes(), code_offset(0), data_offset(0), cur_offset(0), context(0), bs(0), mem(mem), logstate(LL_INFO) {
+    cmplv2::cmplv2(const char* input, memory* mem) : labels(), fixes(), code_offset(0), data_offset(0), cur_offset(0), context(0), bs(0), mem(mem), logstate(LL_INFO), encrypt(false), obfuscate(false) {
         if (this->mem == 0) {
             throw std::runtime_error("Invalid memory pointer");
         }
@@ -68,7 +71,7 @@ namespace zhvm {
         this->cur_offset = &this->code_offset;
     }
 
-    cmplv2::cmplv2(FILE* input, memory* mem) : labels(), fixes(), code_offset(0), data_offset(0), cur_offset(0), context(0), bs(0), mem(mem), logstate(LL_INFO) {
+    cmplv2::cmplv2(FILE* input, memory* mem) : labels(), fixes(), code_offset(0), data_offset(0), cur_offset(0), context(0), bs(0), mem(mem), logstate(LL_INFO), encrypt(false), obfuscate(false) {
 
         if (this->mem == 0) {
             throw std::runtime_error("Invalid memory pointer");
@@ -755,7 +758,20 @@ namespace zhvm {
                 }
                 case CS_FINISH:
                 {
+                    if (this->obfuscate && ((rand() % 4) == 0)) {
+                        uint32_t junk_regs[3] = {zhvm::RZ, zhvm::RZ, zhvm::RZ};
+                        uint32_t junk_cmd = zhvm::PackCommand(zhvm::OP_NOP, junk_regs, 0);
+                        if (this->encrypt) {
+                            junk_cmd ^= ENCRYPT_KEY;
+                        }
+                        mem->SetCode(this->code_offset, junk_cmd);
+                        this->code_offset += sizeof (uint32_t);
+                    }
+
                     uint32_t cmd = zhvm::PackCommand(opcode, regs, imm * signum);
+                    if (this->encrypt) {
+                        cmd ^= ENCRYPT_KEY;
+                    }
                     mem->SetCode(this->code_offset, cmd);
                     this->code_offset += sizeof (uint32_t);
 
@@ -798,7 +814,11 @@ namespace zhvm {
                 return TT2_ERROR;
             }
 
-            zhvm::UnpackCommand(mem->GetCode(offs), &opcode, regs, &imm);
+            uint32_t fix_cmd = mem->GetCode(offs);
+            if (this->encrypt) {
+                fix_cmd ^= ENCRYPT_KEY;
+            }
+            zhvm::UnpackCommand(fix_cmd, &opcode, regs, &imm);
 
             imm = label->second;
 
@@ -809,7 +829,9 @@ namespace zhvm {
             }
 
             uint32_t cmd = zhvm::PackCommand(opcode, regs, imm);
-
+            if (this->encrypt) {
+                cmd ^= ENCRYPT_KEY;
+            }
             mem->SetCode(offs, cmd);
 
         }

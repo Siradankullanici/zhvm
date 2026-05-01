@@ -14,8 +14,13 @@ enum arguments {
     PA_START,
     PA_INPUT,
     PA_OUTPUT,
-    PA_SIZE
+    PA_SIZE,
+    PA_ENCRYPT,
+    PA_OBFUSCATE
 };
+
+bool opt_encrypt = false;
+bool opt_obfuscate = false;
 
 int parse_args(int argc, char* argv[]) {
 
@@ -42,6 +47,14 @@ int parse_args(int argc, char* argv[]) {
                             break;
                         case 's':
                             mode = PA_SIZE;
+                            ++i;
+                            break;
+                        case 'e':
+                            opt_encrypt = true;
+                            ++i;
+                            break;
+                        case 'b':
+                            opt_obfuscate = true;
                             ++i;
                             break;
                         case 'h':
@@ -101,7 +114,7 @@ int parse_args(int argc, char* argv[]) {
 int main(int argc, char* argv[]) {
 
     if (parse_args(argc, argv) != 0) {
-        fprintf(stdout, "%s: %s %s\n", "Usage", argv[0], "[-i INPUT] [-o OUTPUT] [-s SIZE]");
+        fprintf(stdout, "%s: %s %s\n", "Usage", argv[0], "[-i INPUT] [-o OUTPUT] [-s SIZE] [-e] [-b]");
         return -1;
     }
 
@@ -135,7 +148,12 @@ int main(int argc, char* argv[]) {
     }
 
     memory mem(memsize, memsize);
+    if (opt_encrypt) {
+        mem.SetMagic(ZHVM_MEMORY_FILE_MAGIC_ENCRYPTED);
+    }
     cmplv2 cmpl(input, &mem);
+    cmpl.SetEncrypt(opt_encrypt);
+    cmpl.SetObfuscate(opt_obfuscate);
 
     if (cmpl() != TT2_EOF) {
         return -1;

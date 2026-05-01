@@ -66,6 +66,8 @@ namespace zhvm {
         memory* mem; ///< Destination VM memory
 
         int logstate;
+        bool encrypt;
+        bool obfuscate;
 
         cmplv2(const cmplv2& copy); ///< Forbids copy
         cmplv2& operator=(const cmplv2& copy); ///< Forbids copy
@@ -136,6 +138,9 @@ namespace zhvm {
         uint32_t DataOffset() const;
 
         int LogLevel() const;
+
+        void SetEncrypt(bool val) { encrypt = val; }
+        void SetObfuscate(bool val) { obfuscate = val; }
 
     };
 
