@@ -1,0 +1,6 @@
+# Test script for ZHVM protection
+$A = add[,10]
+$B = add[,20]
+$C = add[$A,$B]
+# $C should be 30
+hlt[]

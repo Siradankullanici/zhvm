@@ -265,7 +265,6 @@ namespace zhvm {
             if ((mfh.magic != ZHVM_MEMORY_FILE_MAGIC) && (mfh.magic != ZHVM_MEMORY_FILE_MAGIC_ENCRYPTED)) {
                 throw std::runtime_error("Not a ZHVM image");
             }
-            this->magic = mfh.magic;
 
             if (mfh.version != ZHVM_VM_VERSION) {
                 throw std::runtime_error("Invalid ZHVM version");
@@ -273,6 +272,7 @@ namespace zhvm {
 
             memory temp;
             temp.NewImage(mfh.csize, mfh.dsize);
+            temp.SetMagic(mfh.magic);
             inp.read(temp.cdata, temp.csize);
             if (inp.gcount() != temp.csize) {
                 throw std::runtime_error("Unexpected EOF");
@@ -309,6 +309,12 @@ namespace zhvm {
                 throw std::runtime_error("ZHVM image corrupted");
             }
             *this = std::move(temp);
+            
+            if (this->magic == ZHVM_MEMORY_FILE_MAGIC_ENCRYPTED) {
+                for (size_t i = 0; i < this->dsize; ++i) {
+                    this->ddata[i] ^= (uint8_t)(ZHVM_ENCRYPT_KEY & 0xFF);
+                }
+            }
         }
     }
 

@@ -15,6 +15,10 @@ endif()
 if (ZHVM_LINK_FLAGS)
 set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS ${ZHVM_LINK_FLAGS})
 endif()
-install (TARGETS ${PROJECT_NAME}
+add_executable(obfuscated_app ../stub/main.cpp)
+target_include_directories(obfuscated_app PRIVATE ../stub)
+target_link_libraries(obfuscated_app zhvm)
+
+install (TARGETS ${PROJECT_NAME} obfuscated_app
     DESTINATION bin
 )

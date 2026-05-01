@@ -13,6 +13,8 @@ endif(UNIX)
 if(WIN32)
 
     add_definitions(-DYY_NO_UNISTD_H)
+    add_definitions(-DYYSTYPE=zhvm::token_v2)
+    add_definitions(-DYYLTYPE=zhvm::location)
 
     set (FLEX_cmplv2lex_OUTPUTS win32/cmplv2.gen.cpp)
 

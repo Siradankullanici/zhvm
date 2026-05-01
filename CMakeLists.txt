@@ -25,8 +25,16 @@ if(UNIX)
 endif(UNIX)
 
 if (WIN32)
-#  add_definitions(-DNDEBUG)
+  add_definitions(-DNDEBUG)
   add_definitions(-DWIN32)
+  add_definitions(-D_ALLOW_COMPILER_AND_STL_VERSION_MISMATCH)
+  add_definitions(-DNOMINMAX)
+  
+  if (MSVC)
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Ox /Ot /Oy /GT /GL /Gy /Zi")
+    set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /LTCG /OPT:REF /OPT:ICF")
+    set(CMAKE_STATIC_LINKER_FLAGS_RELEASE "${CMAKE_STATIC_LINKER_FLAGS_RELEASE} /LTCG")
+  endif()
 endif (WIN32)
 
 include_directories(./include)

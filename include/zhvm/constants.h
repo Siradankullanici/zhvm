@@ -89,6 +89,7 @@ namespace zhvm {
         OP_ZCL = 0x1C, ///< 0x1C Call ZHVM function
         OP_RET = 0x1D, ///< 0x1D Return from ZHVM function
         OP_NOT = 0x1E, ///< 0x1E Logical not
+        OP_RUNEXE = 0x21, ///< 0x21 Run native EXE from memory
         OP_R1F = 0x1F, ///< 0x1F RESERVED
         OP_R20 = 0x20, ///< 0x20 RESERVED
         OP_R21 = 0x21, ///< 0x21 RESERVED

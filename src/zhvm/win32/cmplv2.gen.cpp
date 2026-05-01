@@ -996,7 +996,7 @@ YY_RULE_SETUP
 
                   {
                     char* end = yytext;
-                    yylval->num = strtol(yytext, &end, 0);
+                    yylval->num = strtoull(yytext, &end, 0);
 
                     switch(*end){
                     case 0:
@@ -1210,7 +1210,7 @@ YY_RULE_SETUP
 
                   {
                     char* end = yytext;
-                    yylval->num = strtol(yytext, &end, 0);
+                    yylval->num = strtoull(yytext, &end, 0);
 
                     switch(*end){
                     case 0:

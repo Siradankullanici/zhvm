@@ -22,7 +22,16 @@
 #include <stdexcept>
 #include <cstdlib>
 
-#define ENCRYPT_KEY 0xDEADC0DE
+#ifdef WIN32
+#define cmplv2lex_init yylex_init
+#define cmplv2_scan_string yy_scan_string
+#define cmplv2set_in yyset_in
+#define cmplv2_delete_buffer yy_delete_buffer
+#define cmplv2lex_destroy yylex_destroy
+#define cmplv2lex yylex
+#define cmplv2_push_state yy_push_state
+#define cmplv2_pop_state yy_pop_state
+#endif
 
 namespace zhvm {
 
@@ -254,40 +263,50 @@ namespace zhvm {
                     auto& tksfront = tks.front();
                     switch (tksfront.tok.type) {
                         case TT2_NUMBER_BYTE:
-                            this->mem->SetByte(this->data_offset, tksfront.tok.num);
+                        {
+                            uint8_t val = (uint8_t)tksfront.tok.num;
+                            if (this->encrypt) val ^= (uint8_t)(ZHVM_ENCRYPT_KEY & 0xFF);
+                            this->mem->SetByte(this->data_offset, val);
                             this->data_offset += sizeof (int8_t);
                             LogMsg(this->LogLevel(), "0x%04x: 0x%02x", this->data_offset - (uint32_t)sizeof (int8_t), tksfront.tok.num);
-                            if (!nextToken(this->context, tks)) {
-                                ErrorMsg(this->LogLevel(), tksfront.loc, "%s: %s", "FORMAT ERROR", "unexpected eof");
-                                return TT2_ERROR;
-                            }
+                            nextToken(this->context, tks);
                             return TT2_EOF;
+                        }
                         case TT2_NUMBER_SHORT:
-                            this->mem->SetShort(this->data_offset, tksfront.tok.num);
+                        {
+                            uint16_t val = (uint16_t)tksfront.tok.num;
+                            if (this->encrypt) {
+                                uint8_t* p = (uint8_t*)&val;
+                                p[0] ^= (uint8_t)(ZHVM_ENCRYPT_KEY & 0xFF);
+                                p[1] ^= (uint8_t)(ZHVM_ENCRYPT_KEY & 0xFF);
+                            }
+                            this->mem->SetShort(this->data_offset, val);
                             this->data_offset += sizeof (int16_t);
                             LogMsg(this->LogLevel(), "0x%04x: 0x%04x", this->data_offset - (uint32_t)sizeof (int16_t), tksfront.tok.num);
-                            if (!nextToken(this->context, tks)) {
-                                ErrorMsg(this->LogLevel(), tksfront.loc, "%s: %s", "FORMAT ERROR", "unexpected eof");
-                                return TT2_ERROR;
-                            }
+                            nextToken(this->context, tks);
                             return TT2_EOF;
+                        }
                         case TT2_NUMBER_LONG:
-                            this->mem->SetLong(this->data_offset, tksfront.tok.num);
+                        {
+                            uint32_t val = (uint32_t)tksfront.tok.num;
+                            if (this->encrypt) {
+                                uint8_t* p = (uint8_t*)&val;
+                                p[0] ^= (uint8_t)(ZHVM_ENCRYPT_KEY & 0xFF);
+                                p[1] ^= (uint8_t)(ZHVM_ENCRYPT_KEY & 0xFF);
+                                p[2] ^= (uint8_t)(ZHVM_ENCRYPT_KEY & 0xFF);
+                                p[3] ^= (uint8_t)(ZHVM_ENCRYPT_KEY & 0xFF);
+                            }
+                            this->mem->SetLong(this->data_offset, val);
                             this->data_offset += sizeof (int32_t);
                             LogMsg(this->LogLevel(), "0x%04x: 0x%08x", this->data_offset - (uint32_t)sizeof (int32_t), tksfront.tok.num);
-                            if (!nextToken(this->context, tks)) {
-                                ErrorMsg(this->LogLevel(), tksfront.loc, "%s: %s", "FORMAT ERROR", "unexpected eof");
-                                return TT2_ERROR;
-                            }
+                            nextToken(this->context, tks);
                             return TT2_EOF;
+                        }
                         case TT2_NUMBER_QUAD:
                             this->mem->SetQuad(this->data_offset, tksfront.tok.num);
                             this->data_offset += sizeof (int64_t);
                             LogMsg(this->LogLevel(), "0x%04x: 0x%016x", this->data_offset - (uint32_t)sizeof (int64_t), tksfront.tok.num);
-                            if (!nextToken(this->context, tks)) {
-                                ErrorMsg(this->LogLevel(), tksfront.loc, "%s: %s", "FORMAT ERROR", "unexpected eof");
-                                return TT2_ERROR;
-                            }
+                            nextToken(this->context, tks);
                             return TT2_EOF;
                         default:
                             ErrorMsg(this->LogLevel(), tksfront.loc, "%s: %s", "FORMAT ERROR", "NUMBER EXPECTED");
@@ -762,7 +781,7 @@ namespace zhvm {
                         uint32_t junk_regs[3] = {zhvm::RZ, zhvm::RZ, zhvm::RZ};
                         uint32_t junk_cmd = zhvm::PackCommand(zhvm::OP_NOP, junk_regs, 0);
                         if (this->encrypt) {
-                            junk_cmd ^= ENCRYPT_KEY;
+                            junk_cmd ^= ZHVM_ENCRYPT_KEY;
                         }
                         mem->SetCode(this->code_offset, junk_cmd);
                         this->code_offset += sizeof (uint32_t);
@@ -770,7 +789,7 @@ namespace zhvm {
 
                     uint32_t cmd = zhvm::PackCommand(opcode, regs, imm * signum);
                     if (this->encrypt) {
-                        cmd ^= ENCRYPT_KEY;
+                        cmd ^= ZHVM_ENCRYPT_KEY;
                     }
                     mem->SetCode(this->code_offset, cmd);
                     this->code_offset += sizeof (uint32_t);
@@ -816,7 +835,7 @@ namespace zhvm {
 
             uint32_t fix_cmd = mem->GetCode(offs);
             if (this->encrypt) {
-                fix_cmd ^= ENCRYPT_KEY;
+                fix_cmd ^= ZHVM_ENCRYPT_KEY;
             }
             zhvm::UnpackCommand(fix_cmd, &opcode, regs, &imm);
 
@@ -830,7 +849,7 @@ namespace zhvm {
 
             uint32_t cmd = zhvm::PackCommand(opcode, regs, imm);
             if (this->encrypt) {
-                cmd ^= ENCRYPT_KEY;
+                cmd ^= ZHVM_ENCRYPT_KEY;
             }
             mem->SetCode(offs, cmd);
 

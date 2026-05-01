@@ -1,0 +1,24 @@
+# Virtualized version of test_app.c
+# We'll use RA to store the message pointer and call a custom "print" function (index 0)
+$A = add[,@msg1]
+cll[,0] # Call VM_PUT (index 0 in exec.cpp is vm_put)
+
+$A = add[,@msg2]
+cll[,0]
+
+$A = add[,@msg3]
+cll[,0]
+
+hlt[]
+
+!msg1
+!61l # '='
+!0l
+
+!msg2
+!65l # 'A'
+!0l
+
+!msg3
+!61l # '='
+!0l

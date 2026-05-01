@@ -291,13 +291,15 @@ include         BEGIN(INCLUDE_FILE);
                   // DO NOTHING
                 %}
 
-(0x)*{NUMBER}[slqSLQ]*  %{
+(0x)*{NUMBER}[bslqBSLQ]*  %{
                   {
                     char* end = yytext;
-                    yylval->num = strtol(yytext, &end, 0);
+                    yylval->num = strtoull(yytext, &end, 0);
 
                     switch(*end){
                     case 0:
+                    case 'b':
+                    case 'B':
                       yylval->type = zhvm::TT2_NUMBER_BYTE;
                       return zhvm::TT2_NUMBER_BYTE;
                     case 's':

